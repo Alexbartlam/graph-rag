@@ -119,8 +119,130 @@ user_intent_agent = Agent(
 
 print(f"Agent '{user_intent_agent.name}' created.")
 
-# use a helper to create an agent execution environment
-from helper import make_agent_caller
+# =============================================================================
+# DEMO CONFIGURATION - Modify these variables to change the script behavior
+# =============================================================================
 
-# NOTE: if re-running the session, come back here to re-initialize the agent
-user_intent_caller = await make_agent_caller(user_intent_agent)
+# Demo inputs - Change these to test different scenarios
+DEMO_USER_GOAL = """I'd like a bill of materials graph (BOM graph) which includes all levels from suppliers to finished product, 
+which can support root-cause analysis."""
+
+DEMO_FOLLOW_UP = """I'm concerned about possible manufacturing or supplier issues."""
+
+DEMO_APPROVAL = "Approve that goal."
+
+# Demo settings
+VERBOSE_MODE = True  # Set to False for less output
+RUN_DEMO = True      # Set to False to skip the demo
+
+# =============================================================================
+# SYNCHRONOUS DEMO RUNNER - No async needed!
+# =============================================================================
+
+def simulate_tool_call(tool_function, *args, **kwargs):
+    """Simulate calling a tool function directly without the agent."""
+    print(f"🔧 Calling tool: {tool_function.__name__}")
+    if args:
+        print(f"   Args: {args}")
+    if kwargs:
+        print(f"   Kwargs: {kwargs}")
+    
+    # Create a mock tool context with state
+    class MockToolContext:
+        def __init__(self):
+            self.state = {}
+    
+    tool_context = MockToolContext()
+    result = tool_function(*args, tool_context, **kwargs)
+    
+    print(f"   Result: {result}")
+    return result, tool_context.state
+
+def run_user_intent_demo():
+    """Run the user intent demo without async - just direct tool calls."""
+    
+    print("\n" + "="*60)
+    print("🎯 USER INTENT DEMO - Synchronous Version")
+    print("="*60)
+    
+    print(f"📝 Demo Goal: {DEMO_USER_GOAL}")
+    print(f"📝 Follow-up: {DEMO_FOLLOW_UP}")
+    print(f"📝 Approval: {DEMO_APPROVAL}")
+    
+    # Simulate the conversation flow using direct tool calls
+    current_state = {}
+    
+    # Step 1: Parse the user goal and extract kind_of_graph and description
+    print(f"\n{'='*50}")
+    print("STEP 1: Processing User Goal")
+    print(f"{'='*50}")
+    
+    # Simulate what the LLM would extract from the user input
+    kind_of_graph = "bill of materials"
+    graph_description = "A multi-level bill of materials for manufactured products, useful for root cause analysis."
+    
+    print(f"🧠 LLM extracted:")
+    print(f"   Kind of graph: {kind_of_graph}")
+    print(f"   Description: {graph_description}")
+    
+    # Step 2: Set perceived user goal
+    print(f"\n{'='*50}")
+    print("STEP 2: Setting Perceived User Goal")
+    print(f"{'='*50}")
+    
+    result, state_update = simulate_tool_call(
+        set_perceived_user_goal, 
+        kind_of_graph, 
+        graph_description
+    )
+    current_state.update(state_update)
+    
+    # Step 3: Approve the goal
+    print(f"\n{'='*50}")
+    print("STEP 3: Approving User Goal")
+    print(f"{'='*50}")
+    
+    # Create a tool context with the current state
+    class MockToolContext:
+        def __init__(self, state):
+            self.state = state
+    
+    tool_context = MockToolContext(current_state)
+    approval_result = approve_perceived_user_goal(tool_context)
+    
+    print(f"🔧 Calling tool: approve_perceived_user_goal")
+    print(f"   Result: {approval_result}")
+    
+    # Final results
+    print(f"\n{'='*60}")
+    print("✅ DEMO COMPLETED - FINAL RESULTS")
+    print(f"{'='*60}")
+    
+    print(f"📊 Final State: {tool_context.state}")
+    
+    if APPROVED_USER_GOAL in tool_context.state:
+        approved = tool_context.state[APPROVED_USER_GOAL]
+        print(f"\n🎯 Approved Goal:")
+        print(f"   Kind: {approved['kind_of_graph']}")
+        print(f"   Description: {approved['graph_description']}")
+    
+    return tool_context.state
+
+# =============================================================================
+# MAIN EXECUTION
+# =============================================================================
+
+if RUN_DEMO:
+    final_state = run_user_intent_demo()
+    
+    print(f"\n{'='*60}")
+    print("🔧 CUSTOMIZATION TIPS")
+    print(f"{'='*60}")
+    print("To test different scenarios, modify these variables at the top:")
+    print("- DEMO_USER_GOAL: Change the user's request")
+    print("- DEMO_FOLLOW_UP: Change the follow-up question")
+    print("- VERBOSE_MODE: Toggle detailed output")
+    
+else:
+    print("📴 Demo skipped (RUN_DEMO = False)")
+    print("Set RUN_DEMO = True to run the demonstration")
